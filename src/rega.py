@@ -17,6 +17,21 @@ POSSIBLE_STARTS = [
     SU_START
 ]
 
+# import readline
+
+# def completer(text, state):
+#     parser = get_cli_parser()
+#     print (text)
+#     return 'patata'
+#     # options = [i for i in commands if i.startswith(text)]
+#     # if state < len(options):
+#     #     return options[state]
+#     # else:
+#     #     return None
+
+# readline.parse_and_bind("tab: complete")
+# readline.set_completer(completer)
+
 class Config:
     def __init__(self, config=None):
         if config is None:
@@ -76,7 +91,7 @@ class RegexStep:
 
 def get_parser(path):
     with open(path, 'r') as f:
-        lines = f.readlines()
+        lines = f.read().splitlines()
     
     steps = []
     mt = None
@@ -88,7 +103,7 @@ def get_parser(path):
         if line.startswith(RE_START):
             line = line[len(RE_START):]
             if mt is not None:
-                raise ValueError(f'Found regex {re} without substitution')
+                raise ValueError(f'Found regex {mt} without substitution')
             mt = line
         elif line.startswith(SU_START):
             line = line[len(SU_START):]
@@ -124,21 +139,32 @@ def save(path, soft):
     config.add_config(Path(path), soft)
     ConfigManager.save_config(config)
 
-def main():
+def list_regex():
+    config = ConfigManager.get_config()
+    for id, path in config.config.items():
+        print(id, path)
+
+def get_cli_parser():
     import argparse
 
-    parser = argparse.ArgumentParser(description='Apply regex in bulk')
-    parser.add_argument('regex', type=str, help='Path to the regex file OR name of the saved regex file')
+    parser = argparse.ArgumentParser(prog='rega', description='Apply regex in bulk')
+    parser.add_argument('regex', type=str, nargs='?', help='Path to the regex file OR name of the saved regex file')
     parser.add_argument('source', type=Path, nargs='?', default=None, help='Path to the source file for processing')
     parser.add_argument('--save', action='store_true', help='Save (copying the full file!) the regex application file')
     parser.add_argument('--save-soft', action='store_true', help='Save (saving the path to the file!) the regex application file')
+    parser.add_argument('--list', action='store_true', help='List all saved regex files')
+    return parser
 
+def main():
+    parser = get_cli_parser()
     if len(sys.argv)==1:
         parser.print_help(sys.stderr)
         sys.exit(1)
 
     args = parser.parse_args()
-    if args.save or args.save_soft:
+    if args.list:
+        list_regex()
+    elif args.save or args.save_soft:
         if args.save and args.save_soft:
             raise ValueError('Cannot save hard and soft at the same time')
         save(args.regex, args.save_soft)
